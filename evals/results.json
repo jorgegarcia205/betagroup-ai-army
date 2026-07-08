@@ -1,24 +1,180 @@
 {
-  "naive": {
-    "accuracy": 0.833,
-    "false_positive_rate": 0.273,
-    "false_negative_rate": 0.0,
-    "false_positives": 3,
-    "false_negatives": 0,
-    "n": 18,
-    "n_ineligible": 11,
-    "n_eligible": 7
+  "_models": [
+    "gpt-4o-mini",
+    "gpt-4o"
+  ],
+  "_runs": 5,
+  "_n": 40,
+  "gpt-4o-mini": {
+    "naive": {
+      "accuracy": 0.925,
+      "false_positive_rate": 0.12,
+      "fpr_ci95": [
+        0.042,
+        0.3
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 3,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "2/2",
+        "no_master": "1/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "grounded": {
+      "accuracy": 0.925,
+      "false_positive_rate": 0.12,
+      "fpr_ci95": [
+        0.042,
+        0.3
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 3,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "2/2",
+        "no_master": "1/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "grounded+verifier": {
+      "accuracy": 1.0,
+      "false_positive_rate": 0.0,
+      "fpr_ci95": [
+        0,
+        0.133
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "0/2",
+        "no_master": "0/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "cost_usd_total": 0.024,
+    "avg_latency_s": 1.19,
+    "llm_calls": 400
   },
-  "grounded": {
-    "accuracy": 0.944,
-    "false_positive_rate": 0.091,
-    "false_negative_rate": 0.0,
-    "false_positives": 1,
-    "false_negatives": 0,
-    "n": 18,
-    "n_ineligible": 11,
-    "n_eligible": 7
-  },
-  "_model": "gpt-4o-mini",
-  "_runs": 3
+  "gpt-4o": {
+    "naive": {
+      "accuracy": 0.95,
+      "false_positive_rate": 0.08,
+      "fpr_ci95": [
+        0.022,
+        0.25
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 2,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "2/2",
+        "no_master": "0/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "grounded": {
+      "accuracy": 0.975,
+      "false_positive_rate": 0.04,
+      "fpr_ci95": [
+        0.007,
+        0.195
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 1,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "1/2",
+        "no_master": "0/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "grounded+verifier": {
+      "accuracy": 1.0,
+      "false_positive_rate": 0.0,
+      "fpr_ci95": [
+        0,
+        0.133
+      ],
+      "false_negative_rate": 0.0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "n": 40,
+      "n_ineligible": 25,
+      "n_eligible": 15,
+      "fpr_by_category": {
+        "future_year_and_insufficient": "0/2",
+        "in_progress": "0/2",
+        "insufficient_experience": "0/3",
+        "missing_evidence": "0/2",
+        "no_graduation_year": "0/2",
+        "no_master": "0/2",
+        "not_professional_degree": "0/2",
+        "specialization_not_master": "0/3",
+        "wrong_base_profession": "0/2",
+        "wrong_base_with_relevant_master": "0/2",
+        "wrong_field_master": "0/3"
+      }
+    },
+    "cost_usd_total": 0.4054,
+    "avg_latency_s": 0.97,
+    "llm_calls": 400
+  }
 }

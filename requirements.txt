@@ -1,0 +1,4 @@
+# Dependencies for the runnable parts of this portfolio (the evals study).
+# The code_samples are illustrative excerpts and are not meant to be executed
+# as a package.
+openai>=1.0

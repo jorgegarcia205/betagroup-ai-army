@@ -1,12 +1,14 @@
-# BetaGroup AI Army — A Production Multi-Agent LLM System
+# BetaGroup Multi-Agent AI System
+### Architecture, evaluations, and safety lessons from a production agent fleet
 
 > A fleet of specialized LLM agents that amplifies human productivity across an
 > **ocean of pre-existing data** — 8,000,000+ public-procurement contracts,
 > 50,000+ résumés, and thousands of dense tender documents — spanning tender
 > discovery, proposal writing, partner sourcing, legal verification, and
 > recruiting in Colombia and Spain. Built and operated solo.
+> *(Internally referred to as the "BetaGroup AI Army".)*
 
-**Author:** Jorge García · [github.com/jorgegarcia205](https://github.com/jorgegarcia205) · jm.garcia380@gmail.com
+**Author:** Jorge García · [github.com/jorgegarcia205](https://github.com/jorgegarcia205) · jorge@betagroupservices.com
 *(Curated portfolio for the [Singapore AI Safety Fellowship](https://www.aisafety.sg/programs/singapore-ai-safety-fellowship). The production system is private; this repository documents its architecture and shares sanitized, representative code.)*
 
 ---
@@ -174,10 +176,12 @@ problems the AI-safety community cares about:
 - **Hallucination is a failure mode to engineer against — and to *measure*.**
   Evaluation prompts require verbatim evidence and make "no evidence" resolve to
   **rejection**; the model's output is then validated and bounded before it is
-  persisted. I ran a small controlled experiment on this
-  ([**`evals/`**](evals/)): on synthetic candidates, evidence-grounding cut an
-  LLM evaluator's false-positive rate (passing an unqualified candidate — the
-  harmful error) from **27% to 9%**, while not eliminating it. See
+  persisted. I ran a controlled experiment on this ([**`evals/`**](evals/), 40
+  synthetic candidates, 2 models, 95% CIs): a cheap **deterministic verifier
+  placed in front of the LLM drove the false-positive rate (passing an
+  unqualified candidate — the harmful error) to 0** for both models — cheaper
+  *and* better than upgrading the model (a $0.02 run beat a $0.41 run), while
+  prompt-only fixes were modest and model-dependent. See
   [`code_samples/evaluation_prompt.py`](code_samples/evaluation_prompt.py).
 - **Silent, confident wrongness is the real danger.** The hardest bugs were
   agents doing the *wrong* thing quietly (a mis-selected search filter that
@@ -222,9 +226,10 @@ Gemini, Anthropic (with fallback) · public **SECOP** & **RUES** data sources ·
 ```
 betagroup-portfolio/
 ├── README.md                     ← this file
-├── evals/                        ← a small empirical eval study (runnable)
+├── LICENSE · SECURITY.md · requirements.txt · .env.example
+├── evals/                        ← empirical eval study (3 conditions, 2 models, runnable)
 │   ├── README.md                 ← hypothesis, method, results, limitations
-│   ├── dataset.json · prompts.py · run_eval.py · results.json
+│   ├── dataset.json · prompts.py · verifier.py · run_eval.py · results.json
 ├── docs/
 │   ├── ARCHITECTURE.md           ← full component & data-flow map
 │   └── RESEARCH_INTERESTS.md     ← AI-safety motivation & research directions

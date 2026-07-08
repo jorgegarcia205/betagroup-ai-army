@@ -1,9 +1,5 @@
 # Research interests & motivation
 
-> **Draft — make it your own.** This is a starting point written in first person
-> for the fellowship application. Edit freely so it sounds like you; replace the
-> bracketed notes.
-
 ## Why AI safety, for me
 
 I did not arrive at AI safety from theory. I arrived at it by *building* — I
@@ -28,11 +24,13 @@ Three connected areas, all grounded in things I have already built:
 
 1. **LLM evaluations & trustworthiness (LLM-as-a-judge).** I rely on LLMs to
    make gated judgments; I have seen how prompt framing changes the *direction*
-   of their errors. I ran a small experiment ([`../evals/`](../evals/)) showing
-   that evidence-grounding cut an evaluator's harmful-direction (false-positive)
-   error ~3×, but did **not** eliminate it. I want to work on how to measure and
-   improve judge reliability where the two error types have asymmetric cost, and
-   on when a model *follows* a rule versus merely appears to.
+   of their errors. I ran an experiment ([`../evals/`](../evals/), 40 cases, two
+   models, 95% CIs) showing that prompt-only fixes were modest and
+   model-dependent, but a cheap **deterministic verifier in front of the LLM**
+   drove the harmful-direction (false-positive) error to zero on rule-expressible
+   requirements — cheaper than upgrading the model. I want to study the boundary:
+   *which* decisions can be safely delegated to a deterministic check, and when a
+   model genuinely *follows* a rule versus merely appears to.
 
 2. **Oversight of autonomous / multi-agent systems.** My system is a live case
    study in decomposing work across agents of increasing autonomy with mandatory
@@ -55,9 +53,21 @@ Three connected areas, all grounded in things I have already built:
 - Strong engineering: async multi-agent systems, LLM orchestration with
   reliability guarantees, data pipelines over 50k+ records, evaluation design.
 
+## A concrete question I would want to pursue
+
+**The rule-coverage frontier for LLM judgments.** When an LLM is used to make a
+gated decision, part of that decision is often expressible as a deterministic
+check and part is genuinely not. My eval suggests that, where a check *is*
+expressible, a cheap verifier in front of the model dominates prompt engineering
+and even model scale. I would want to characterize that frontier: on realistic,
+messy inputs, what fraction of a judgment can be safely delegated to
+deterministic verification, how do we *detect* which fraction that is, and how do
+we keep the LLM honest on the residual — the part where no rule can save us. This
+sits squarely in evaluations and scalable oversight.
+
 ## What I want from the fellowship
 
 To convert a builder's intuitions into **research** — to learn to state a
 safety-relevant hypothesis precisely, design an experiment that could falsify it,
-and contribute results the field can build on. [Add: the specific research areas
-/ mentors you are ranking, and one concrete question you would want to pursue.]
+and contribute results the field can build on, alongside mentors working on
+evaluations, oversight, and trustworthy autonomous systems.
