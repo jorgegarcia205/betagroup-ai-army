@@ -17,6 +17,36 @@ LLM-judges, human review) mostly by intuition. There is no principled way to
 answer: **which checks, in which positions, catch the most error for the least
 cost and latency?**
 
+## Why this is grounded, not hypothetical
+
+I am not proposing this from a blank page. I am proposing to **generalize what my
+production system already does piecemeal** — and to systematize failures I have
+already watched happen. The tool's components each exist, in embryonic form, in a
+system I run today:
+
+| Tool component | Already exists in my system as… |
+|---|---|
+| **Tracer** (log every hand-off) | an asynchronous **mission queue** where every agent-to-agent hand-off is already a durable database row, plus per-action logs |
+| **Deterministic check before the LLM** | a **rule-based classifier that decides 99.4%** of cases (homogenizing 50k+ records against an official taxonomy) *before* any LLM is called |
+| **Human checkpoint placement** | mandatory **`review` states** and an explicit **human index-review gate** before a proposal is generated — checkpoints already sit at chosen points in the chain |
+| **A measured placement result** | my [eval](../evals/): at the judge stage, a **$0.02 deterministic check beat a $0.41 model upgrade** — one real point on the safety-per-cost frontier |
+
+And the failure mode is not theoretical — I have fixed real instances of it:
+
+- A scraper silently captured a **job title instead of the person's name**; the
+  wrong value flowed into the database and into every downstream evaluation,
+  invisible until someone inspected it.
+- A search agent silently chose a **narrower filter** ("Doctorate in Economics"
+  instead of "Economics"), quietly collapsing a result set from **803 to 51** — an
+  early-stage error that shrank the entire downstream candidate pool.
+- **Duplicate records propagated as inflated counts**: 50,044 rows were only
+  **27,956 real people**; any downstream metric that didn't de-duplicate was wrong.
+
+These are exactly the *quiet, propagating* errors the tool is built to locate — and
+they are real traces I can use to seed realistic fault models rather than guessing.
+The research contribution is turning this hard-won, ad-hoc experience into a
+**measurable, reusable method**.
+
 ## Core idea
 
 Model the system as a directed graph of stages ending in a decision `D`. Then:
