@@ -234,7 +234,8 @@ betagroup-portfolio/
 │   ├── dataset.json · prompts.py · verifier.py · run_eval.py · results.json
 ├── docs/
 │   ├── ARCHITECTURE.md           ← full component & data-flow map
-│   ├── RESEARCH_INTERESTS.md     ← AI-safety motivation & research directions
+│   ├── RESEARCH_INTERESTS.md     ← AI-safety motivation & the research question
+│   ├── PROJECT_PROPOSAL.md       ← sketch of the open-source oversight-placement tool
 │   ├── TECHNICAL_WORK_SAMPLE.pdf ← 2-page write-up of the eval study (attachable)
 │   └── assets/architecture.png   ← the diagram above
 └── code_samples/                 ← sanitized, self-contained excerpts
