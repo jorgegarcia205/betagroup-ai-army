@@ -171,9 +171,13 @@ problems the AI-safety community cares about:
 - **Humans hold the commit bit.** Agents finish in `review`; consequential
   outputs (candidate short-lists, proposal outlines, advertising plans) require
   explicit human approval. Default is *stop and ask*, not *act*.
-- **Hallucination is a failure mode to engineer against.** Evaluation prompts
-  require verbatim evidence and make "no evidence" resolve to **rejection**;
-  the model's output is then validated and bounded before it is persisted. See
+- **Hallucination is a failure mode to engineer against — and to *measure*.**
+  Evaluation prompts require verbatim evidence and make "no evidence" resolve to
+  **rejection**; the model's output is then validated and bounded before it is
+  persisted. I ran a small controlled experiment on this
+  ([**`evals/`**](evals/)): on synthetic candidates, evidence-grounding cut an
+  LLM evaluator's false-positive rate (passing an unqualified candidate — the
+  harmful error) from **27% to 9%**, while not eliminating it. See
   [`code_samples/evaluation_prompt.py`](code_samples/evaluation_prompt.py).
 - **Silent, confident wrongness is the real danger.** The hardest bugs were
   agents doing the *wrong* thing quietly (a mis-selected search filter that
@@ -186,7 +190,9 @@ problems the AI-safety community cares about:
 
 These are exactly the instincts I want to sharpen through formal AI-safety work:
 keeping capable autonomous systems **evaluable, correctable, and under human
-control** as they scale.
+control** as they scale. My research interests and motivation are in
+[`docs/RESEARCH_INTERESTS.md`](docs/RESEARCH_INTERESTS.md); a first small
+empirical step is in [`evals/`](evals/).
 
 ---
 
@@ -216,7 +222,12 @@ Gemini, Anthropic (with fallback) · public **SECOP** & **RUES** data sources ·
 ```
 betagroup-portfolio/
 ├── README.md                     ← this file
-├── docs/ARCHITECTURE.md          ← full component & data-flow map
+├── evals/                        ← a small empirical eval study (runnable)
+│   ├── README.md                 ← hypothesis, method, results, limitations
+│   ├── dataset.json · prompts.py · run_eval.py · results.json
+├── docs/
+│   ├── ARCHITECTURE.md           ← full component & data-flow map
+│   └── RESEARCH_INTERESTS.md     ← AI-safety motivation & research directions
 └── code_samples/                 ← sanitized, self-contained excerpts
     ├── base_agent.py             ← the async mission-queue agent loop
     ├── llm_fallback.py           ← provider fallback + JSON-safe LLM calls
