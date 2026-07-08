@@ -219,10 +219,19 @@ betagroup-portfolio/
 ├── docs/ARCHITECTURE.md          ← full component & data-flow map
 └── code_samples/                 ← sanitized, self-contained excerpts
     ├── base_agent.py             ← the async mission-queue agent loop
-    ├── llm_fallback.py           ← provider fallback + JSON-safe calls
-    ├── profession_taxonomy.py    ← rule-based SNIES classifier
-    └── evaluation_prompt.py      ← evidence-grounded evaluation prompt
+    ├── llm_fallback.py           ← provider fallback + JSON-safe LLM calls
+    ├── evaluation_prompt.py      ← evidence-grounded evaluation + output guard
+    ├── profession_taxonomy.py    ← rule-based SNIES classifier (99.4% coverage)
+    ├── secop_partner_search.py   ← SECOP open-API search, keyword memory, cohort sampling
+    ├── rues_verifier.py          ← resilient DOM extraction for legal (RUP) verification
+    ├── nl_to_sql_search.py       ← natural-language query → structured filters
+    └── advanced_search.sql       ← the SQL function behind the search (JSONB/array predicates)
 ```
+
+The samples span the fleet: core infrastructure (`base_agent`, `llm_fallback`),
+judgment (`evaluation_prompt`, `profession_taxonomy`), and three different
+domains (`secop_partner_search`, `rues_verifier`, `nl_to_sql_search` +
+`advanced_search.sql`).
 
 > **Security note:** no credentials, API keys, personal data, or client-specific
 > business logic are included. All excerpts are sanitized. The production system
