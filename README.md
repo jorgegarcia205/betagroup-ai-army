@@ -11,6 +11,8 @@
 **Author:** Jorge García · [github.com/jorgegarcia205](https://github.com/jorgegarcia205) · jorge@betagroupservices.com
 *(Curated portfolio for the [Singapore AI Safety Fellowship](https://www.aisafety.sg/programs/singapore-ai-safety-fellowship). The production system is private; this repository documents its architecture and shares sanitized, representative code.)*
 
+![System architecture: agent hierarchy and asynchronous mission queue](docs/assets/architecture.png)
+
 ---
 
 ## 1. The core problem: productivity inside a sea of data
@@ -232,7 +234,9 @@ betagroup-portfolio/
 │   ├── dataset.json · prompts.py · verifier.py · run_eval.py · results.json
 ├── docs/
 │   ├── ARCHITECTURE.md           ← full component & data-flow map
-│   └── RESEARCH_INTERESTS.md     ← AI-safety motivation & research directions
+│   ├── RESEARCH_INTERESTS.md     ← AI-safety motivation & research directions
+│   ├── TECHNICAL_WORK_SAMPLE.pdf ← 2-page write-up of the eval study (attachable)
+│   └── assets/architecture.png   ← the diagram above
 └── code_samples/                 ← sanitized, self-contained excerpts
     ├── base_agent.py             ← the async mission-queue agent loop
     ├── llm_fallback.py           ← provider fallback + JSON-safe LLM calls
