@@ -1,248 +1,213 @@
 # BetaGroup AI Army — A Production Multi-Agent LLM System
 
-> A fleet of specialized LLM agents that automates public-procurement and talent
-> workflows end-to-end across Colombia and Spain. Built and operated solo:
-> ~26 autonomous agents, 50,000+ processed résumés, multi-provider LLM
-> orchestration, and human-in-the-loop review at every consequential step.
+> A fleet of specialized LLM agents that amplifies human productivity across an
+> **ocean of pre-existing data** — 8,000,000+ public-procurement contracts,
+> 50,000+ résumés, and thousands of dense tender documents — spanning tender
+> discovery, proposal writing, partner sourcing, legal verification, and
+> recruiting in Colombia and Spain. Built and operated solo.
 
 **Author:** Jorge García · [github.com/jorgegarcia205](https://github.com/jorgegarcia205) · jm.garcia380@gmail.com
-*(Prepared as a curated portfolio for the [Singapore AI Safety Fellowship](https://www.aisafety.sg/programs/singapore-ai-safety-fellowship). The full production system is kept in a private repository for security and IP reasons; this repository documents the architecture and shares sanitized, representative code.)*
+*(Curated portfolio for the [Singapore AI Safety Fellowship](https://www.aisafety.sg/programs/singapore-ai-safety-fellowship). The production system is private; this repository documents its architecture and shares sanitized, representative code.)*
 
 ---
 
-## 1. TL;DR
+## 1. The core problem: productivity inside a sea of data
 
-BetaGroup AI Army is a real, in-production system that turns a labor-intensive
-consulting workflow — finding public tenders, assembling qualified teams, and
-producing winning proposals — into an orchestrated set of autonomous LLM agents.
+None of the hard problems here are a single prompt. They are all variants of the
+same thing: **there is far more relevant data than any human can read.**
 
-| | |
-|---|---|
-| **Scale** | 50,044 résumés ingested → 27,956 unique people after dedup; ~26 registered agents; 3 deployment services |
-| **Agents** | Military hierarchy: General → Commander → Lieutenant → Soldier, each a Python class |
-| **LLM layer** | Provider-agnostic client with an automatic fallback chain (Gemini → OpenAI → Anthropic), retries, timeouts, and spend-cap detection |
-| **Coordination** | Fully asynchronous mission-queue over Postgres (Supabase); agents never call each other directly |
-| **Automation** | Playwright browser agents with resilient DOM extraction and human-like behavior |
-| **Deployment** | Docker + Railway, multiple always-on containers |
-| **Frontend** | Lovable/React dashboard that dispatches missions and renders results |
+- ~**8 million** public contracts in Colombia's SECOP open database.
+- **50,000+** résumés in the internal talent pool.
+- **Thousands** of tender documents (*pliegos*), each dozens to hundreds of pages
+  of legal and technical specification.
 
-The system is not itself AI-safety research, but it was engineered around
-principles that matter for **safe deployment of autonomous LLM systems**:
-graceful degradation, evidence-grounded evaluation to suppress hallucination,
-structured-output validation, and mandatory human checkpoints. Those are
-discussed explicitly in [Section 6](#6-engineering-for-reliable--overseeable-ai).
+A consultancy that wants to win public tenders must, continuously: find the
+right tenders, decide go/no-go, assemble a team whose credentials survive audit,
+find partner companies to co-bid with, verify their legal standing, and write a
+winning technical methodology. By hand this does not scale.
+
+So I built an **army of narrow, coordinated agents**, each of which turns one
+slice of that ocean into a decision-ready output — with a human approving every
+consequential step.
 
 ---
 
-## 2. The problem
+## 2. The agent hierarchy
 
-Public procurement in Latin America and Spain is high-value but operationally
-brutal: thousands of tenders, each with dense legal/technical specification
-documents (*pliegos*), strict disqualifying requirements, and a need to
-assemble teams whose credentials survive audit. Doing this by hand is slow and
-error-prone.
+Every agent inherits from one `BaseAgent` and owns exactly one job. Rank encodes
+**responsibility**, and it maps cleanly onto a division of cognitive labor that,
+in hindsight, is a practical answer to "how do you compose LLMs safely":
 
-I built an "army" of agents that each own a narrow, verifiable task, and a
-coordination layer that lets them work concurrently without stepping on each
-other — with a human approving every decision that leaves a mark.
+| Rank | Role | Uses an LLM? | Concrete examples in the system |
+|---|---|---|---|
+| **Soldier** (L1) | Deterministic execution — get the raw data | ❌ No (pure scripts) | Résumé scraper (Playwright), RUES legal-standing verifier, PLACSP tender scraper, *pliego* downloader, SECOP API puller, Telegram notifier |
+| **Lieutenant** (L2) | Judgment — evaluate / analyze / parse what soldiers gathered | ✅ Yes | Talent evaluator, tender go/no-go analyst (CO & ES), *pliego* parser, strategic analyst, methodology QA, natural-language query parser |
+| **Captain** (L3) | Orchestration of a whole domain — pre-filter, consolidate, dispatch sub-missions | ✅ Yes | Talent-DB evaluator (evaluates the whole pool against a tender), Partners-SECOP captain (keyword expansion + search) |
+| **Commander** (L3+) | Strategy & generation — produce the final artifact | ✅ Yes | Methodology generator (writes the proposal), go/no-go consolidation |
+| **General** (L4) | Top-level assignment & monitoring | — | Lovable dashboard + orchestration logic |
 
----
-
-## 3. Architecture
-
-### 3.1 Agent hierarchy
-
-Every agent inherits from a single `BaseAgent` and has one job. Rank encodes
-responsibility, not privilege:
+**Why this matters beyond org-chart cuteness:** soldiers are LLM-free and
+therefore auditable and cheap; lieutenants are where judgment (and hallucination
+risk) lives, so that is exactly where the evidence-grounding and output
+validation are concentrated; captains never do fine-grained work themselves,
+they decompose it into missions and **delegate** (e.g. the Partners captain hands
+each candidate NIT to the RUES soldier). Capability and autonomy increase with
+rank, and so does the human review attached to the output.
 
 ```
-GENERAL      (L4)  Orchestration & mission assignment
-  └ COMMANDER (L3)  Area strategy, consolidation, GO/NO-GO decisions
-     └ LIEUTENANT (L2)  Quality control, LLM evaluation, prioritization
-        └ SOLDIER (L1)  Execution: scraping, downloading, extraction
+GENERAL      Orchestration & assignment
+  └ COMMANDER   Strategy / generation of the final artifact
+     └ CAPTAIN     Domain orchestration, pre-filter, delegation
+        └ LIEUTENANT  LLM judgment: evaluate / analyze / parse
+           └ SOLDIER     Deterministic execution: scrape / download / extract
 ```
 
-### 3.2 Asynchronous mission queue
+---
 
-Agents are decoupled through a Postgres `missions` table. Lovable (or another
-agent) inserts a mission; the responsible agent claims it by polling; results
-are written back and surfaced via Supabase Realtime. No agent ever calls
-another directly — this makes the system observable, restartable, and immune to
-cascading failure.
+## 3. What the army actually does (the subsystems)
+
+### A. Talent sourcing & evidence-grounded evaluation *(Colombia)*
+Browser **soldiers** scrape résumés; a pipeline homogenizes 50k+ of them against
+Colombia's official **SNIES** education taxonomy (8 knowledge areas → *núcleos
+básicos* → canonical professions) — 99.4% by rules, no LLM cost. A **captain**
+then evaluates the whole pool against a specific tender's mandatory/scored
+requirements using an evidence-grounded prompt (see §4.2), sorting people into
+*eligible / manageable / rejected*. A natural-language search ("civil engineer
+with 2 master's in engineering, 5+ yrs, Bogotá") is parsed by an LLM into
+structured SQL filters over canonical columns. Records are deduplicated
+(50,044 → 27,956 real people).
+
+### B. Partner discovery over the SECOP open API *(Colombia)*
+To co-bid on large tenders you need partner companies with the right track
+record. A **captain** queries Colombia's **SECOP** public API (~8M contracts):
+- **Phase 1 (LLM):** expands a theme into candidate keywords, and *remembers
+  within a search cycle which keywords were already used vs. not*.
+- **Phase 2:** runs exact-keyword queries against the API, then applies AI to
+  rank fit — reporting **clear indicators** (number of contracts on the theme,
+  totals, and a breakdown **by contract modality**: direct award, merit
+  competition, public tender, auction, special regime), **excluding public
+  entities**, and handling **consortia** as a separate case (no RUP, single
+  contract). It then **delegates legal verification** of each candidate to the
+  RUES soldier (subsystem C).
+
+### C. Legal-standing verification via RUES *(Colombia)*
+A browser **soldier** visits `rues.org.co`, switches the registry to
+*Proponentes*, enters a company's NIT, and extracts whether a valid **RUP**
+(bidder registration) exists and — critically — its **renewal date**. Supports
+a single NIT or an Excel batch. This is the "is this partner actually allowed to
+bid?" check.
+
+### D. Tender detection & go/no-go analysis *(Colombia & Spain)*
+- **Colombia:** an analyst **lieutenant** scores incoming tenders against a rules
+  engine and pushes **Telegram alerts** above a configurable threshold.
+- **Spain (PLACSP):** soldiers run a mass search on
+  `contrataciondelestado.es`, a scheduler enqueues extract/analyze missions, and
+  a **lieutenant** downloads the *pliegos* and produces a structured go/no-go
+  read — so a human sees a ranked shortlist instead of a raw firehose.
+
+### E. Winning-proposal methodology generation *(Spain)*
+The most complex pipeline: an 8-stage flow (Pliego → Classification → Research →
+Generation → Editing → Cohesion → Graphics → Roundtable) that reads both the
+technical (**PPT**) and administrative (**PCAP**) specification documents,
+extracts the scoring criteria, and drafts a scored technical methodology. A
+**parser lieutenant** structures the *pliego*; a **strategic-analysis
+lieutenant** performs a deep multi-layer read (pinned to a strong reasoning model
+because its output feeds every later stage); a **commander** generates the
+document. There is a mandatory **human index-review checkpoint** before
+generation — the system proposes an outline and waits for approval.
+
+### F. Marketing content generation *(secondary)*
+A conversational agent turns a product (photos or URL) into a full advertising
+plan + branded PDF, with optional media (voiceover, images, short video). It
+also demonstrates the human-approval pattern: it produces a **plan for approval
+first**, and only generates content after the human signs off — and applies
+surgical edits rather than regenerating from scratch.
+
+---
+
+## 4. Cross-cutting engineering
+
+### 4.1 Asynchronous mission queue (no direct agent-to-agent calls)
+All coordination flows through a Postgres `missions` table. An agent claims a
+mission by polling, does its job, writes results, and leaves the mission in a
+**`review`** state for a human. This gives observability (every hand-off is a
+row), restartability (kill any container; missions persist), and no cascading
+failure. See [`code_samples/base_agent.py`](code_samples/base_agent.py).
 
 ```mermaid
 flowchart LR
-    UI[Lovable / React dashboard] -->|INSERT mission| Q[(Supabase<br/>missions queue)]
-    Q -->|poll & claim| A1[Soldier: scraper]
-    Q -->|poll & claim| A2[Lieutenant: evaluator]
-    Q -->|poll & claim| A3[Commander: strategy]
-    A1 -->|write results| DB[(Postgres tables)]
-    A2 -->|write results| DB
-    A3 -->|write results| DB
+    UI[Lovable dashboard] -->|INSERT mission| Q[(Supabase missions queue)]
+    Q -->|claim| S[Soldier: scrape / API / download]
+    S -->|raw data| DB[(Postgres)]
+    S -.auto-creates.-> Q
+    Q -->|claim| L[Lieutenant: LLM judgment]
+    L -->|scored results| DB
+    Q -->|claim| C[Captain: orchestrate + delegate]
+    C -.dispatch sub-missions.-> Q
     DB -->|Realtime| UI
-    A1 -. auto-creates .-> Q
-    A2 -. auto-creates .-> Q
+    UI -->|human approves| DB
 ```
 
-A mission moves through an explicit lifecycle
-(`queued → in_progress → review → completed / failed`), and an agent that
-finishes work leaves it in **`review`** — a human, not the machine, promotes it
-to `completed`.
+### 4.2 Reliability-first LLM client
+One client wraps every model call with a **provider fallback chain**
+(Gemini → OpenAI → Anthropic). Transient errors retry; **account-level** errors
+(spend cap / billing) skip the whole provider instead of hammering it. Every
+structured call is validated as JSON and retried on malformed output. See
+[`code_samples/llm_fallback.py`](code_samples/llm_fallback.py).
 
-### 3.3 Deployment topology
-
-Three always-on Railway containers, split by resource profile:
-
-- **Scrapers** — Playwright/Chromium browser agents (RAM-heavy).
-- **Evaluators** — pure LLM + DB agents (light), including the talent
-  evaluator and the natural-language search agent.
-- **Vigilance** — email intake, marketing generation, and the Spain
-  methodology pipeline.
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full component map.
+### 4.3 Rule-first data, LLM-last
+Wherever a deterministic rule can do the job, it does — the SNIES classifier
+handles 99.4% of 50k records with zero LLM cost; the LLM is reserved for the
+genuine long tail. See [`code_samples/profession_taxonomy.py`](code_samples/profession_taxonomy.py).
 
 ---
 
-## 4. Selected subsystems
+## 5. Engineering for reliable & overseeable AI
 
-### 4.1 Provider-agnostic LLM client with a reliability-first fallback chain
+This is applied engineering, not safety research — but building *autonomous*
+multi-agent LLM systems in production forced me to confront, concretely, several
+problems the AI-safety community cares about:
 
-A single client wraps every LLM call. If a provider is overloaded, rate-limited,
-or hits an account-level spend cap, it degrades gracefully down a chain rather
-than failing the task. Account-level errors (e.g. billing/spend-cap) skip an
-entire provider instead of wastefully retrying it.
-
-```python
-# Sanitized excerpt — see code_samples/llm_fallback.py
-def _get_fallback_chain(self, failed_provider, failed_model, last_error):
-    """Return the ordered list of (provider, model) to try next.
-
-    If the error is account-level (spend cap / billing), skip EVERY model of
-    that provider — retrying the same account will only fail again.
-    """
-    chain = [("gemini", "gemini-2.5-flash"),
-             ("openai", "gpt-4o-mini"),
-             ("anthropic", "claude-...")]
-    if self._is_account_level_error(last_error):
-        chain = [(p, m) for (p, m) in chain if p != failed_provider]
-    return chain
-```
-
-Every structured call goes through `chat_json`, which strips markdown fences,
-validates the JSON, and **retries on malformed output** — so a single bad
-generation never corrupts downstream state.
-
-### 4.2 Evidence-grounded evaluation engine (anti-hallucination by design)
-
-The most safety-relevant component. A "Captain" agent evaluates each résumé
-against a tender's mandatory and scored requirements. The prompt is engineered
-so the model **cannot pass a candidate on absent evidence** — the default for
-"the CV says nothing about this" is *fail*, never *maybe*:
-
-```text
-EVIDENCE IS MANDATORY. Every conclusion MUST cite verbatim text from the CV.
-Do not invent data. If there is no evidence in the CV, the correct conclusion
-is NO_CUMPLE (does not meet) — never OBSERVACION and never CUMPLE.
-
-A degree with no graduation year AND no evidence it was completed
--> treat as NOT completed -> NO_CUMPLE.
-```
-
-The model returns a strict JSON verdict per requirement (`CUMPLE / NO_CUMPLE /
-OBSERVACION`) with the citation, and the code **sanitizes and bounds** the
-result before it is ever persisted. This turns an LLM from a plausible-sounding
-narrator into an auditable evaluator.
-
-### 4.3 Data homogenization against an official taxonomy
-
-50,000+ scraped résumés had inconsistent, sometimes corrupted profession/degree
-fields. I mapped them to Colombia's **official SNIES higher-education taxonomy**
-(8 knowledge areas → *núcleos básicos* → canonical professions). A rule-based
-classifier — no LLM cost — covers **99.4%** of records; the remaining long tail
-is reserved for an LLM pass.
-
-Crucially, every academic title (undergraduate *and* each postgraduate) is
-normalized with its level + area, which makes structured queries like
-*"civil engineer with two master's degrees in engineering"* answerable in SQL.
-
-```python
-# Sanitized excerpt — see code_samples/profession_taxonomy.py
-def classify_title(raw):
-    n = normalize_text(raw)                 # upper, strip accents, Ñ->N
-    for keywords, canonical, nbc, area in RULES:  # ordered, specific-first
-        if all(kw in n for kw in keywords):
-            return {"profession_canonical": canonical,
-                    "snies_nbc": nbc, "snies_area": area}
-    return None                              # -> LLM fallback / uncategorized
-```
-
-### 4.4 Natural-language talent search
-
-A user types *"civil engineer with 2 master's in engineering, 5+ years, in
-Bogotá"*. An LLM (pinned to a JSON-reliable model) parses it into **structured
-filters**, which are executed by a SQL function over the canonical columns —
-LLM for understanding, deterministic SQL for retrieval. The LLM never touches
-the data directly; it only produces a validated filter object.
-
-### 4.5 Resilient web automation
-
-Browser soldiers log in and extract data with Playwright, using human-like
-delays, DOM walkers that survive markup changes, and diagnostic dumps when a
-selector drifts. A representative bug I fixed: a profession autocomplete was
-silently selecting a *narrower* option (`"Doctorate in Economics"` instead of
-`"Economics"`), collapsing 803 results to 51. The fix scores suggestions by
-exact/shortest match — a reminder that in agentic systems, *silent* wrong
-actions are more dangerous than loud failures.
-
----
-
-## 5. Scale & results
-
-- **50,044** résumés ingested; **27,956** unique people after email/document-based
-  deduplication (removing 22,888 duplicate records, one profile had 107 copies).
-- **99.4%** of the corpus auto-classified to the SNIES taxonomy by rules alone.
-- Parallelized the evaluation pipeline (bounded concurrency + moving blocking
-  DB writes off the event loop) — from a sequential ~2h job toward a ~10-minute one.
-- End-to-end structured search verified in production against real data.
-
----
-
-## 6. Engineering for reliable & overseeable AI
-
-This project is applied engineering, not safety research — but building an
-*autonomous* multi-agent LLM system in production forced me to confront, in
-concrete terms, several problems the AI-safety community cares about:
-
-- **Human oversight is mandatory, not optional.** Agents finish work in a
-  `review` state; consequential outputs (advertising plans, methodology
-  indexes, candidate short-lists) require explicit human approval before they
-  take effect. The default is *stop and ask*, not *act*.
-- **Hallucination is treated as a failure mode to engineer against.** The
-  evaluation prompts require verbatim evidence and make "no evidence" resolve to
-  rejection, then the code validates and bounds the model's output.
-- **Graceful degradation over brittle confidence.** Multi-provider fallback,
-  timeouts, idempotent retries, and account-level error detection keep a single
-  provider incident from taking down the fleet.
-- **Silent misbehavior is the real risk.** Several of the hardest bugs were
-  agents doing the *wrong* thing confidently and quietly (a mis-selected filter,
-  a mis-parsed name). I added diagnostics and comparison checks specifically to
-  make wrong-but-plausible actions visible.
-- **Observability by construction.** Every action is logged; agents emit
-  progress and heartbeats; the queue makes the whole system inspectable and
-  restartable.
+- **Humans hold the commit bit.** Agents finish in `review`; consequential
+  outputs (candidate short-lists, proposal outlines, advertising plans) require
+  explicit human approval. Default is *stop and ask*, not *act*.
+- **Hallucination is a failure mode to engineer against.** Evaluation prompts
+  require verbatim evidence and make "no evidence" resolve to **rejection**;
+  the model's output is then validated and bounded before it is persisted. See
+  [`code_samples/evaluation_prompt.py`](code_samples/evaluation_prompt.py).
+- **Silent, confident wrongness is the real danger.** The hardest bugs were
+  agents doing the *wrong* thing quietly (a mis-selected search filter that
+  silently cut 803 results to 51; a scraper capturing a job title instead of a
+  name). I added comparison checks and diagnostics specifically to surface
+  wrong-but-plausible actions.
+- **Graceful degradation over brittle confidence**, and **observability by
+  construction** (every action logged, progress + heartbeats emitted, the queue
+  fully inspectable and replayable).
 
 These are exactly the instincts I want to sharpen through formal AI-safety work:
-how to make capable autonomous systems that remain **evaluable, correctable, and
-under human control** as they scale.
+keeping capable autonomous systems **evaluable, correctable, and under human
+control** as they scale.
+
+---
+
+## 6. Scale & results
+
+- ~**26** registered agents across 5 domains and 2 countries, on 3 always-on services.
+- **8M+** SECOP contracts queried for partner discovery; **50,044** résumés
+  processed → **27,956** unique people after deduplication.
+- **99.4%** of the résumé corpus auto-classified to the SNIES taxonomy by rules.
+- Evaluation pipeline parallelized (bounded concurrency + blocking DB writes
+  moved off the event loop): from a sequential ~2h job toward ~10 minutes.
 
 ---
 
 ## 7. Tech stack
 
-**Python 3.11** (asyncio) · **Supabase/PostgreSQL** (queue + store + Realtime) ·
-**Playwright** (browser automation) · **LLMs**: OpenAI, Google Gemini, Anthropic
-(with fallback) · **Docker** + **Railway** · **Lovable/React** frontend ·
-**ReportLab** (PDF) · **ElevenLabs / FLUX / Kling** (media generation).
+**Python 3.11** (asyncio) · **Supabase/PostgreSQL** (mission queue + store +
+Realtime) · **Playwright** (browser automation) · **LLMs**: OpenAI, Google
+Gemini, Anthropic (with fallback) · public **SECOP** & **RUES** data sources ·
+**Docker** + **Railway** · **Lovable/React** frontend · **ReportLab** (PDF) ·
+**ElevenLabs / FLUX / Kling** (media).
 
 ---
 
@@ -251,8 +216,7 @@ under human control** as they scale.
 ```
 betagroup-portfolio/
 ├── README.md                     ← this file
-├── docs/
-│   └── ARCHITECTURE.md           ← full component & data-flow map
+├── docs/ARCHITECTURE.md          ← full component & data-flow map
 └── code_samples/                 ← sanitized, self-contained excerpts
     ├── base_agent.py             ← the async mission-queue agent loop
     ├── llm_fallback.py           ← provider fallback + JSON-safe calls
@@ -260,17 +224,17 @@ betagroup-portfolio/
     └── evaluation_prompt.py      ← evidence-grounded evaluation prompt
 ```
 
-> **Security note:** No credentials, API keys, personal data, or client-specific
-> business logic are included in this repository. All excerpts are sanitized and
-> illustrative. The production system is private.
+> **Security note:** no credentials, API keys, personal data, or client-specific
+> business logic are included. All excerpts are sanitized. The production system
+> is private.
 
 ---
 
 ## 9. What I would improve next
 
-- Add fine-grained progress/heartbeat writes so long LLM steps are observable
-  as a live progress bar rather than a coarse phase label.
-- Move canonicalization into the ingestion path so new records are normalized on
-  write, not only via batch backfill.
-- Add automatic evaluation-set regression tests for prompt changes (a small
-  "eval harness" so prompt edits can't silently degrade judgment quality).
+- Fine-grained progress/heartbeat writes so long LLM stages show a live progress
+  bar instead of a coarse phase label.
+- Canonicalize records on ingestion, not only via batch backfill.
+- A small **evaluation harness** (regression tests over a labeled set) so prompt
+  edits cannot silently degrade judgment quality — the closest thing to
+  "unit tests for an LLM's reasoning."

@@ -75,7 +75,23 @@ sequenceDiagram
 - Advanced search is exposed as a SQL function so array/JSONB predicates (e.g.
   "≥2 master's in a given knowledge area") run in the database, not the client.
 
-## 6. Testing & operability
+## 6. Domains (what the fleet covers)
+
+| Domain | Country | Representative agents (rank) |
+|---|---|---|
+| Talent sourcing & evaluation | CO | résumé scraper (S), talent evaluator captain (C), NL-search parser (L) |
+| Partner discovery over SECOP API | CO | partners-SECOP captain (C) → delegates to RUES soldier |
+| Legal-standing verification (RUES) | CO | RUES/RUP verifier (S) |
+| Tender detection & go/no-go | CO / ES | PLACSP scraper (S), tender analysts (L), Telegram notifier (S) |
+| Proposal-methodology generation | ES | pliego parser (L), strategic analyst (L), generator commander (Cmd), QA (L) |
+| Marketing content generation | — | concierge (L), media producer (S) |
+
+Each domain is independent at the queue level: they share the `BaseAgent`,
+`LLMClient`, and `missions` infrastructure, but their agents never block one
+another. A domain can be deployed, scaled, or disabled via an env flag without
+touching the others.
+
+## 7. Testing & operability
 
 - Batch scripts default to `--dry-run` to measure impact before writing.
 - Every agent action is logged; agents report progress every N units so a stuck
