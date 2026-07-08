@@ -32,11 +32,13 @@ Three connected areas, all grounded in things I have already built:
    *which* decisions can be safely delegated to a deterministic check, and when a
    model genuinely *follows* a rule versus merely appears to.
 
-2. **Oversight of autonomous / multi-agent systems.** My system is a live case
-   study in decomposing work across agents of increasing autonomy with mandatory
-   human checkpoints. I am interested in scalable oversight: which decisions can
-   be safely delegated, how to make an agent's reasoning legible enough to
-   audit, and how to detect silent misbehavior before it propagates.
+2. **Error propagation & oversight in multi-agent systems.** My system is a live
+   case study in decomposing work across agents of increasing autonomy. A small
+   mistake by one agent — a mis-extracted field, a mis-parsed requirement — can
+   flow downstream and corrupt a final decision. I am interested in *where*
+   automated checks and human review should intervene to catch such errors early,
+   and how to keep that oversight cheap enough that the system stays fast and
+   useful.
 
 3. **Honesty & hallucination as engineering targets.** The single most useful
    thing I did was treat "no evidence → do not claim" as a hard rule and then
@@ -53,21 +55,28 @@ Three connected areas, all grounded in things I have already built:
 - Strong engineering: async multi-agent systems, LLM orchestration with
   reliability guarantees, data pipelines over 50k+ records, evaluation design.
 
-## A concrete question I would want to pursue
+## The question I want to investigate in Singapore
 
-**The rule-coverage frontier for LLM judgments.** When an LLM is used to make a
-gated decision, part of that decision is often expressible as a deterministic
-check and part is genuinely not. My eval suggests that, where a check *is*
-expressible, a cheap verifier in front of the model dominates prompt engineering
-and even model scale. I would want to characterize that frontier: on realistic,
-messy inputs, what fraction of a judgment can be safely delegated to
-deterministic verification, how do we *detect* which fraction that is, and how do
-we keep the LLM honest on the residual — the part where no rule can save us. This
-sits squarely in evaluations and scalable oversight.
+**How can we prevent small errors from propagating through a multi-agent system
+and becoming bad final decisions?**
 
-## What I want from the fellowship
+More specifically: *where* should automated checks and human review intervene to
+catch errors early, while keeping the system fast, useful, and affordable?
 
-To convert a builder's intuitions into **research** — to learn to state a
-safety-relevant hypothesis precisely, design an experiment that could falsify it,
-and contribute results the field can build on, alongside mentors working on
-evaluations, oversight, and trustworthy autonomous systems.
+I have felt this problem directly. In my own fleet a quiet mistake by one agent
+can survive into a final output simply because nothing downstream was positioned
+to catch it. My eval work is a first step: it shows that a cheap deterministic
+check placed *in front of* an LLM can remove a whole class of errors for a
+fraction of the cost of a stronger model. I want to generalize that — to map, along
+a chain of agents, where a check (automated or human) yields the most safety per
+unit of cost and latency.
+
+## What I want the outcome to be
+
+I want the result to be **more than a paper.** I want to build an **open-source
+evaluation tool** and a **practical oversight prototype** that organizations can
+test in their own multi-agent systems — something that helps a team see where
+errors enter a chain of agents and where a check would catch them earliest. The
+fellowship is where I want to turn a builder's intuition into rigorous method,
+alongside mentors working on evaluations, oversight, and trustworthy autonomous
+systems.
