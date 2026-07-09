@@ -50,8 +50,9 @@ I want the outcome to be **more than a paper.** I want to build an **open-source
 evaluation tool** and a **practical oversight prototype** that organizations can
 test on their own multi-agent systems: something that maps where errors enter a
 pipeline, how far they propagate, and where a checkpoint would catch them
-earliest and cheapest. A concrete sketch of that tool is in
-[`PROJECT_PROPOSAL.md`](PROJECT_PROPOSAL.md).
+earliest and cheapest. The full proposal — hypotheses, experimental design, and
+an 11-week plan — is in the [technical work sample PDF](TECHNICAL_WORK_SAMPLE.pdf)
+(browsable summary: [`PROJECT_PROPOSAL.md`](PROJECT_PROPOSAL.md)).
 
 ## What I want from the fellowship
 

@@ -1,110 +1,109 @@
-# Project sketch — an oversight-placement tool for multi-agent systems
+# Stopping silent errors before they become decisions
 
-*Working title:* **Interlock** — *find where to catch errors before they become
-bad decisions.*
+### Oversight checkpoints for hierarchical multi-agent AI systems
 
-> A concrete sketch of what I would build during the fellowship. It generalizes
-> my [evaluation study](../evals/) from "one check in one place" to "where, along a
-> whole chain of agents, should checks go?"
+> Concise, browsable summary of my research proposal. The **authoritative, full
+> version (10 pp, with figures and my prior AI-assurance background)** is the
+> [technical work sample PDF](TECHNICAL_WORK_SAMPLE.pdf). This page exists so the
+> proposal is readable directly on GitHub.
 
-## Problem
+## The question
 
-Multi-agent LLM systems are chains: an agent's output is the next agent's input.
-A small, quiet error early in the chain (a mis-extracted field, a mis-parsed
-requirement) can propagate and corrupt the final decision — the failure mode that
-is hardest to see and most dangerous. Teams add checks (deterministic validators,
-LLM-judges, human review) mostly by intuition. There is no principled way to
-answer: **which checks, in which positions, catch the most error for the least
-cost and latency?**
+**Plain language:** if an AI agent makes a small mistake at the beginning of a
+workflow, *where* should automated checks or human review intervene so the
+mistake does not become a major decision?
+
+**Formal:** which combination of automated verification and human-review
+checkpoints most effectively prevents silent, high-cost errors from propagating
+through hierarchical multi-agent systems, while preserving task performance,
+speed, and cost efficiency?
 
 ## Why this is grounded, not hypothetical
 
 I am not proposing this from a blank page. I am proposing to **generalize what my
 production system already does piecemeal** — and to systematize failures I have
-already watched happen. The tool's components each exist, in embryonic form, in a
-system I run today:
+already watched happen. Each component of the study exists, in embryonic form, in
+a system I run today:
 
-| Tool component | Already exists in my system as… |
+| Study component | Already exists in my system as… |
 |---|---|
-| **Tracer** (log every hand-off) | an asynchronous **mission queue** where every agent-to-agent hand-off is already a durable database row, plus per-action logs |
-| **Deterministic check before the LLM** | a **rule-based classifier that decides 99.4%** of cases (homogenizing 50k+ records against an official taxonomy) *before* any LLM is called |
-| **Human checkpoint placement** | mandatory **`review` states** and an explicit **human index-review gate** before a proposal is generated — checkpoints already sit at chosen points in the chain |
-| **A measured placement result** | my [eval](../evals/): at the judge stage, a **$0.02 deterministic check beat a $0.41 model upgrade** — one real point on the safety-per-cost frontier |
+| **Tracer** (log every hand-off) | an asynchronous **mission queue** where every agent-to-agent hand-off is a durable database row, plus per-action logs |
+| **Deterministic check before the LLM** | a **rule-based classifier that decides 99.4%** of cases before any LLM is called |
+| **Human checkpoint placement** | mandatory **`review` states** and an explicit **human review gate** before consequential outputs |
+| **A measured placement result** | my [eval](../evals/): at the judge stage a **$0.02 deterministic check beat a $0.41 model upgrade** — one real point on the safety-per-cost frontier |
 
 And the failure mode is not theoretical — I have fixed real instances of it:
 
 - A scraper silently captured a **job title instead of the person's name**; the
-  wrong value flowed into the database and into every downstream evaluation,
-  invisible until someone inspected it.
-- A search agent silently chose a **narrower filter** ("Doctorate in Economics"
-  instead of "Economics"), quietly collapsing a result set from **803 to 51** — an
-  early-stage error that shrank the entire downstream candidate pool.
-- **Duplicate records propagated as inflated counts**: 50,044 rows were only
-  **27,956 real people**; any downstream metric that didn't de-duplicate was wrong.
+  wrong value flowed downstream into every evaluation, invisible until inspected.
+- A search agent silently chose a **narrower filter**, quietly collapsing a result
+  set from **803 to 51** — an early error that shrank the whole downstream pool.
+- **Duplicate records propagated as inflated counts** (50,044 rows were only
+  **27,956 real people**). These are the *quiet, propagating* errors the study
+  targets — and real traces I can use to seed realistic fault models.
 
-These are exactly the *quiet, propagating* errors the tool is built to locate — and
-they are real traces I can use to seed realistic fault models rather than guessing.
-The research contribution is turning this hard-won, ad-hoc experience into a
-**measurable, reusable method**.
+## Hypotheses
 
-## Core idea
+- **H1** — Final-only review detects fewer upstream errors than checkpointed
+  oversight, because the original evidence becomes less visible after consolidation.
+- **H2** — Fixed checkpoints reduce harmful error propagation but impose
+  unnecessary human-review burden on low-risk missions.
+- **H3** — Adaptive oversight, triggered by risk signals (missing evidence,
+  contradiction, abnormal result counts, high-risk actions), achieves a better
+  safety–efficiency trade-off than fixed review.
+- **H4** — Deterministic verification combined with evidence-grounded LLM
+  evaluation outperforms prompting alone, especially for explicit legal or
+  eligibility constraints.
 
-Model the system as a directed graph of stages ending in a decision `D`. Then:
+## Experimental design
 
-1. **Measure the blast radius of each stage.** For each stage `i`, inject a
-   realistic fault and measure `P(D is wrong | fault at i)` — how far errors
-   introduced there actually propagate to the final decision. Not all stages are
-   equally dangerous; this tells you which ones are.
-2. **Characterize candidate checks.** Each check `c` (a deterministic verifier,
-   an LLM-judge, a human review step) has a *catch rate* on a given fault type
-   and a *cost profile* (latency, $, and false-positive burden — an over-eager
-   check wrongly blocks good work).
-3. **Optimize placement.** Given a budget on added latency/cost, choose *where*
-   to place checks to minimize final-decision error — and expose the
-   **safety-per-cost frontier** so a team can pick their point on it.
+- **Test bed:** sanitized résumé-evaluation and tender-analysis pipelines, with
+  synthetic English/Spanish documents and labelled ground truth (no personal or
+  client data).
+- **Oversight conditions** (same tasks, models, and inputs across all four):
+  **(A)** no review · **(B)** final-output review only · **(C)** fixed review
+  after selected ranks · **(D)** adaptive review triggered by risk signals.
+- **Fault injection** at the soldier, lieutenant, and captain levels: wrong-field
+  extraction, omitted evidence, incorrect filter, contradictory documents,
+  fabricated support, malformed structured output, and an injected instruction
+  from an untrusted source. Location and intended effect known in advance.
 
-The one-line objective: **maximize error caught per unit of cost + latency
-added.** My eval already showed one striking point on this frontier — a $0.02
-deterministic check beat a $0.41 model upgrade. The tool asks that question for
-every position in the chain.
+**Metrics:** harmful error rate (high-cost false positives reaching final
+output) · propagation depth (hand-offs before detection) · detection location ·
+human-review burden (cases/minutes of expert attention) · latency and API cost.
 
-## What the tool does (components)
+## Preliminary evidence
 
-- **Tracer** — lightweight instrumentation that logs each agent's input/output at
-  every hand-off, turning a running system into an analyzable graph.
-- **Fault injector** — a library of realistic, per-stage fault models to measure
-  propagation, with ground-truth final labels.
-- **Check library** — pluggable checks (rule-based verifier, LLM-judge, human
-  gate) with measured catch-rate and cost profiles.
-- **Placement optimizer** — computes recommended checkpoint locations and the
-  safety-per-cost frontier (greedy + budgeted search).
-- **Report** — a pipeline map highlighting error entry points, propagation paths,
-  and where a check earns its keep.
+The repo already contains a reproducible [eval](../evals/): across `gpt-4o-mini`
+and `gpt-4o`, prompt-only fixes were modest and model-dependent, while a
+deterministic verifier drove false-positive PASS verdicts to 0 — and
+`gpt-4o-mini + verifier` (FPR 0, $0.024) beat `gpt-4o` with prompting alone
+(FPR 0.04, $0.41, ~17× the cost). That is one point on the safety-per-cost
+frontier this study would map across a whole agent hierarchy.
 
-## 3-month MVP (deliberately tractable)
+## Deliverables (an 11-week plan)
 
-- Instrument **one real chain** I already run (extract → parse requirement →
-  LLM-judge → aggregate) plus one public benchmark pipeline.
-- Synthetic fault injection at each stage; 3 check types; a greedy placement
-  optimizer; one clear visualization.
-- Validate against the generalized version of my existing eval set.
+- A **research paper** on oversight placement and silent-error propagation in
+  hierarchical agent systems.
+- An **open-source evaluation harness** with controlled fault injection and
+  replayable mission logs.
+- A **bilingual (EN/ES) benchmark** of realistic, labelled failure cases.
+- A **prototype adaptive-oversight policy** using risk signals.
+- A **practical implementation note** for public-sector and enterprise teams
+  deploying agentic workflows.
 
-**Deliverables:** a pip-installable open-source library + a written analysis (the
-paper) reporting per-stage blast radius and the placement frontier on ≥2 systems.
+## Why it matters
 
-## Why it matters for safety
+The project treats "where humans and automated checks should sit in an autonomous
+pipeline" as an empirical, optimizable question rather than a matter of taste —
+and asks not *whether* humans should stay involved, but *how scarce human
+attention should be allocated* inside a multi-agent workflow. It is especially
+relevant for resource-constrained and Global South contexts: a smaller model plus
+a targeted verifier can be safer *and* cheaper than escalating to a larger model.
 
-It is a practical, measurable instrument for **scalable oversight and
-defense-in-depth**: it treats "where humans and automated checks should sit in an
-autonomous pipeline" as an empirical, optimizable question rather than a matter of
-taste — and produces something teams can actually run on their own systems.
+## Honest risks
 
-## Honest risks & unknowns
-
-- **Fault realism.** Synthetic faults may not match how real agents fail;
-  mitigation is to seed them from real traces.
-- **Non-stationarity.** Catch rates and costs shift across inputs and models; the
-  frontier is a distribution, not a fixed number — CIs everywhere.
-- **The human-review check is the hardest to model** (cost, latency, and human
-  error itself). I would start with a conservative stub and treat modeling it
-  well as a research contribution in its own right.
+Synthetic faults may not match real failures (mitigation: seed from real traces);
+catch rates and costs shift across inputs and models (report distributions, not
+point values); and the human-review checkpoint is itself the hardest thing to
+model — a research contribution in its own right.
