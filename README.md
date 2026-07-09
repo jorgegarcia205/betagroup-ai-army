@@ -11,6 +11,8 @@
 **Author:** Jorge García · [github.com/jorgegarcia205](https://github.com/jorgegarcia205) · jorge@betagroupservices.com
 *(Curated portfolio for the [Singapore AI Safety Fellowship](https://www.aisafety.sg/programs/singapore-ai-safety-fellowship). The production system is private; this repository documents its architecture and shares sanitized, representative code.)*
 
+📄 **Best single overview:** [research proposal + technical work sample (PDF)](docs/TECHNICAL_WORK_SAMPLE.pdf) — *"Stopping silent errors before they become decisions."*
+
 ![System architecture: agent hierarchy and asynchronous mission queue](docs/assets/architecture.png)
 
 ---
@@ -236,7 +238,7 @@ betagroup-portfolio/
 │   ├── ARCHITECTURE.md           ← full component & data-flow map
 │   ├── RESEARCH_INTERESTS.md     ← AI-safety motivation & the research question
 │   ├── PROJECT_PROPOSAL.md       ← sketch of the open-source oversight-placement tool
-│   ├── TECHNICAL_WORK_SAMPLE.pdf ← 2-page write-up of the eval study (attachable)
+│   ├── TECHNICAL_WORK_SAMPLE.pdf ← research proposal + work sample (10 pp, attachable)
 │   └── assets/architecture.png   ← the diagram above
 └── code_samples/                 ← sanitized, self-contained excerpts
     ├── base_agent.py             ← the async mission-queue agent loop
